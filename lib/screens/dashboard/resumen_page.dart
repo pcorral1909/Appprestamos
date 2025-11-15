@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pie_chart/pie_chart.dart';
 import 'package:prestamos_app/database/app_database.dart';
 import '../clientes/clientes_page.dart';
 import '../prestamos/proximos_pagos_page.dart';
@@ -12,9 +13,6 @@ class ResumenPage extends StatefulWidget {
 }
 
 class _ResumenPageState extends State<ResumenPage> {
-  // =====================================================
-  //  Calcula estadísticas DIRECTAMENTE DE LA BASE DE DATOS
-  // =====================================================
   Future<Map<String, double>> _calcularEstadisticas() async {
     final prestamos = await widget.db.select(widget.db.prestamos).get();
 
@@ -25,19 +23,14 @@ class _ResumenPageState extends State<ResumenPage> {
     for (final p in prestamos) {
       totalPrestado += p.monto;
 
-      // =============================
-      // OBTENER PAGOS REALES (FIX)
-      // =============================
       final amortizaciones = await (widget.db.select(
         widget.db.amortizaciones,
       )..where((tbl) => tbl.prestamoId.equals(p.id))).get();
 
       final totalPagos = amortizaciones.length;
 
-      // Ganancia calculada
       totalGanancia += (p.pagoQuincenal * totalPagos) - p.monto;
 
-      // Pagos futuros
       final ahora = DateTime.now();
 
       for (final pago in amortizaciones) {
@@ -54,41 +47,77 @@ class _ResumenPageState extends State<ResumenPage> {
     };
   }
 
-  // =====================================================
-  // STREAM AUTOMÁTICO: se actualiza cuando cambian préstamos o pagos
-  // =====================================================
   Stream<Map<String, double>> _statsStream() async* {
-    // Primera carga
     yield await _calcularEstadisticas();
 
-    // Escucha cuando cambian préstamos
     await for (final _ in widget.db.select(widget.db.prestamos).watch()) {
       yield await _calcularEstadisticas();
     }
 
-    // Escucha cuando cambian pagos
     await for (final _ in widget.db.select(widget.db.amortizaciones).watch()) {
       yield await _calcularEstadisticas();
     }
   }
 
-  Widget _buildCard(String titulo, double valor) {
-    return Card(
-      elevation: 4,
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      child: ListTile(
-        title: Text(titulo),
-        trailing: Text(
-          "\$${valor.toStringAsFixed(2)}",
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+  // Tarjeta con animación
+  Widget _animatedCard(String titulo, double valor, int index) {
+    return TweenAnimationBuilder<double>(
+      duration: Duration(milliseconds: 500 + (index * 150)),
+      tween: Tween(begin: 0, end: 1),
+      builder: (_, value, child) {
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, 20 * (1 - value)),
+            child: child,
+          ),
+        );
+      },
+      child: Card(
+        elevation: 4,
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        child: ListTile(
+          title: Text(titulo),
+          trailing: Text(
+            "\$${valor.toStringAsFixed(2)}",
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
         ),
       ),
     );
   }
 
-  // =====================================================
+  // Pie Chart animado
+  Widget _buildPieChart(double totalPrestado, double ganancia, double proximo) {
+    return TweenAnimationBuilder<double>(
+      duration: const Duration(milliseconds: 600),
+      tween: Tween(begin: 0, end: 1),
+      builder: (context, value, _) {
+        return PieChart(
+          dataMap: {
+            "Prestado": totalPrestado * value,
+            "Ganancia": ganancia * value,
+            "Próximos pagos": proximo * value,
+          },
+          chartRadius: MediaQuery.of(context).size.width * 0.35,
+          colorList: const [Colors.blue, Colors.green, Colors.orange],
+          legendOptions: const LegendOptions(
+            showLegends: true,
+            legendPosition: LegendPosition.right,
+          ),
+          chartValuesOptions: const ChartValuesOptions(
+            showChartValuesInPercentage: true,
+            decimalPlaces: 1,
+          ),
+          animationDuration: const Duration(milliseconds: 0),
+        );
+      },
+    );
+  }
+
+  // ===========================
   // UI
-  // =====================================================
+  // ===========================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -137,6 +166,7 @@ class _ResumenPageState extends State<ResumenPage> {
           ],
         ),
       ),
+
       body: StreamBuilder<Map<String, double>>(
         stream: _statsStream(),
         builder: (context, snapshot) {
@@ -146,15 +176,26 @@ class _ResumenPageState extends State<ResumenPage> {
 
           final stats = snapshot.data!;
 
-          return Padding(
+          return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                _buildCard("Total prestado", stats['totalPrestado']!),
-                _buildCard("Ganancia total", stats['ganancia']!),
-                _buildCard(
+                // 🔵 PIE CHART ANIMADO
+                _buildPieChart(
+                  stats['totalPrestado']!,
+                  stats['ganancia']!,
+                  stats['proximoLiquidar']!,
+                ),
+
+                const SizedBox(height: 20),
+
+                // Tarjetas animadas
+                _animatedCard("Total prestado", stats['totalPrestado']!, 0),
+                _animatedCard("Ganancia total", stats['ganancia']!, 1),
+                _animatedCard(
                   "Próximos pagos a liquidar",
                   stats['proximoLiquidar']!,
+                  2,
                 ),
               ],
             ),

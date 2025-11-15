@@ -125,9 +125,26 @@ class _AgregarPrestamoPageState extends State<AgregarPrestamoPage> {
             ),
           );
 
-      fechaPago = fechaPago.add(const Duration(days: 14));
+      fechaPago = siguienteQuincena(fechaPago);
     }
 
     Navigator.pop(context);
+  }
+
+  DateTime siguienteQuincena(DateTime fecha) {
+    final dia = fecha.day;
+    final mes = fecha.month;
+    final anio = fecha.year;
+
+    // Si estamos del 1 al 15 → siguiente es día 16
+    if (dia <= 15) {
+      return DateTime(anio, mes, 16);
+    }
+
+    // Si estamos del 16 en adelante → siguiente es día 1 del siguiente mes
+    final siguienteMes = mes == 12 ? 1 : mes + 1;
+    final siguienteAnio = mes == 12 ? anio + 1 : anio;
+
+    return DateTime(siguienteAnio, siguienteMes, 1);
   }
 }

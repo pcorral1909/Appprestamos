@@ -107,7 +107,9 @@ extension PrestamosQueries on AppDatabase {
 
       for (final row in rows) {
         final prestamo = row.readTable(prestamos);
-        final pago = row.readTableOrNull(amortizaciones); // Amortizacione?
+        final pago = row.readTableOrNull(
+          amortizaciones,
+        ); // IMPORTANTE: correcto
 
         mapa.putIfAbsent(prestamo.id, () => PrestamoConPagos(prestamo, []));
 
