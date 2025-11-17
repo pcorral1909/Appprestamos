@@ -15,6 +15,7 @@ class PrestamosApp extends StatelessWidget {
 
     return MaterialApp(
       title: "Prestamos Corral",
+      debugShowCheckedModeBanner: false, // <-- Aquí se quita el banner
       theme: ThemeData(
         useMaterial3: true,
         colorSchemeSeed: const Color.fromARGB(255, 2, 137, 248),

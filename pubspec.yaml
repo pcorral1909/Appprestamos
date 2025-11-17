@@ -19,6 +19,8 @@ dependencies:
   intl: ^0.18.1
   fl_chart: ^0.69.0
   pie_chart: ^5.3.2
+  rename_app: ^1.6.5
+  flutter_launcher_icons: ^0.13.1
 
 
 dev_dependencies:
@@ -31,7 +33,16 @@ dev_dependencies:
   intl: ^0.18.1
   fl_chart: ^0.69.0
   pie_chart: ^5.3.2
+  flutter_launcher_icons: ^0.13.1
 
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/icon.png"
+
