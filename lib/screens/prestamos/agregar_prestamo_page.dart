@@ -20,8 +20,11 @@ class AgregarPrestamoPage extends StatefulWidget {
 class _AgregarPrestamoPageState extends State<AgregarPrestamoPage> {
   final TextEditingController _montoController = TextEditingController();
   final TextEditingController _primerPagoController = TextEditingController();
+  final TextEditingController _tasaController = TextEditingController();
+  final TextEditingController _mesesController = TextEditingController();
 
   DateTime? _primerPago;
+  String _tipo = 'ordinario';
 
   @override
   Widget build(BuildContext context) {
@@ -31,6 +34,31 @@ class _AgregarPrestamoPageState extends State<AgregarPrestamoPage> {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
+            DropdownButtonFormField<String>(
+              value: _tipo,
+              items: const [
+                DropdownMenuItem(
+                  value: 'ordinario',
+                  child: Text('Préstamo ordinario'),
+                ),
+                DropdownMenuItem(
+                  value: 'tasa',
+                  child: Text('Préstamo con tasa'),
+                ),
+                DropdownMenuItem(value: 'msi', child: Text('Préstamo MSI')),
+                DropdownMenuItem(
+                  value: 'sin_interes',
+                  child: Text('Préstamo sin interés'),
+                ),
+              ],
+              onChanged: (v) => setState(() => _tipo = v ?? 'ordinario'),
+              decoration: const InputDecoration(
+                labelText: 'Tipo de préstamo',
+                border: OutlineInputBorder(),
+              ),
+            ),
+
+            const SizedBox(height: 20),
             // MONTO
             TextField(
               controller: _montoController,
@@ -42,6 +70,17 @@ class _AgregarPrestamoPageState extends State<AgregarPrestamoPage> {
             ),
 
             const SizedBox(height: 20),
+            if (_tipo == 'msi')
+              TextField(
+                controller: _mesesController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Meses',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+
+            if (_tipo == 'msi') const SizedBox(height: 20),
 
             // FECHA PRIMER PAGO
             TextField(
@@ -74,6 +113,18 @@ class _AgregarPrestamoPageState extends State<AgregarPrestamoPage> {
 
             const SizedBox(height: 20),
 
+            if (_tipo == 'tasa')
+              TextField(
+                controller: _tasaController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Tasa mensual (%)',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+
+            if (_tipo == 'tasa') const SizedBox(height: 20),
+
             ElevatedButton(
               onPressed: _guardarPrestamo,
               child: const Text("Guardar préstamo"),
@@ -92,41 +143,141 @@ class _AgregarPrestamoPageState extends State<AgregarPrestamoPage> {
     // Fecha primer pago
     final fechaPrimerPago = _primerPago ?? DateTime.now();
 
-    const totalPagos = 8;
-    const costoPorMil = 175; // lo que pagan por 1000 en cada quincena
+    if (_tipo == 'ordinario') {
+      const totalPagos = 8;
+      const costoPorMil = 175;
+      final pagoQuincenal = (monto / 1000) * costoPorMil;
+      final prestamoId = await widget.db
+          .into(widget.db.prestamos)
+          .insert(
+            PrestamosCompanion.insert(
+              clienteId: widget.cliente.id,
+              monto: monto,
+              pagoQuincenal: Value(pagoQuincenal),
+              fechaInicio: DateTime.now(),
+              fechaPrimerPago: Value(fechaPrimerPago),
+              tipoPrestamo: const Value('ordinario'),
+            ),
+          );
 
-    final pagoQuincenal = (monto / 1000) * costoPorMil;
+      DateTime fechaPago = fechaPrimerPago;
+      for (int i = 0; i < totalPagos; i++) {
+        await widget.db
+            .into(widget.db.amortizaciones)
+            .insert(
+              AmortizacionesCompanion.insert(
+                prestamoId: prestamoId,
+                monto: pagoQuincenal,
+                fechaPago: fechaPago,
+                pagado: const Value(false),
+              ),
+            );
+        fechaPago = siguienteQuincena(fechaPago);
+      }
+      Navigator.pop(context);
+      return;
+    }
+    if (_tipo == 'msi') {
+      final meses = int.tryParse(_mesesController.text.trim());
+      if (meses == null || meses <= 0) return;
 
-    // INSERTAR PRÉSTAMO
-    final prestamoId = await widget.db
+      final pagoMensual = double.parse((monto / meses).toStringAsFixed(2));
+      final fechaPrimerPago = _primerPago ?? DateTime.now();
+
+      final prestamoId = await widget.db
+          .into(widget.db.prestamos)
+          .insert(
+            PrestamosCompanion.insert(
+              clienteId: widget.cliente.id,
+              monto: monto,
+              fechaInicio: DateTime.now(),
+              fechaPrimerPago: Value(fechaPrimerPago),
+              tipoPrestamo: const Value('msi'),
+              meses: Value(meses),
+            ),
+          );
+
+      DateTime fechaPago = fechaPrimerPago;
+
+      for (int i = 0; i < meses; i++) {
+        await widget.db
+            .into(widget.db.amortizaciones)
+            .insert(
+              AmortizacionesCompanion.insert(
+                prestamoId: prestamoId,
+                monto: pagoMensual,
+                fechaPago: fechaPago,
+                pagado: const Value(false),
+              ),
+            );
+
+        // siguiente mes
+        fechaPago = DateTime(
+          fechaPago.year,
+          fechaPago.month + 1,
+          fechaPago.day,
+        );
+      }
+
+      Navigator.pop(context);
+      return;
+    }
+    if (_tipo == 'sin_interes') {
+      final prestamoId = await widget.db
+          .into(widget.db.prestamos)
+          .insert(
+            PrestamosCompanion.insert(
+              clienteId: widget.cliente.id,
+              monto: monto,
+              fechaInicio: DateTime.now(),
+              fechaPrimerPago: Value(_primerPago),
+              tipoPrestamo: const Value('sin_interes'),
+            ),
+          );
+
+      Navigator.pop(context);
+      return;
+    }
+
+    // TASA
+    final tasa = double.tryParse(_tasaController.text.trim());
+    if (tasa == null || tasa <= 0) return;
+
+    final prestamoIdTasa = await widget.db
         .into(widget.db.prestamos)
         .insert(
           PrestamosCompanion.insert(
             clienteId: widget.cliente.id,
             monto: monto,
-            pagoQuincenal: pagoQuincenal,
             fechaInicio: DateTime.now(),
-            fechaPrimerPago: fechaPrimerPago,
+            fechaPrimerPago: Value(fechaPrimerPago),
+            tipoPrestamo: const Value('tasa'),
+            interesMensual: Value(tasa),
           ),
         );
 
-    // GENERAR PAGOS QUINCENALES
-    DateTime fechaPago = fechaPrimerPago;
+    final interesInicial = double.parse(
+      ((monto * tasa) / 100).toStringAsFixed(2),
+    );
+    await widget.db
+        .into(widget.db.amortizaciones)
+        .insert(
+          AmortizacionesCompanion.insert(
+            prestamoId: prestamoIdTasa,
+            monto: interesInicial,
+            fechaPago: fechaPrimerPago,
+            pagado: const Value(false),
+          ),
+        );
 
-    for (int i = 0; i < totalPagos; i++) {
-      await widget.db
-          .into(widget.db.amortizaciones)
-          .insert(
-            AmortizacionesCompanion.insert(
-              prestamoId: prestamoId,
-              monto: pagoQuincenal,
-              fechaPago: fechaPago,
-              pagado: const Value(false), // ESTA SÍ REQUIERE VALUE()
-            ),
-          );
-
-      fechaPago = siguienteQuincena(fechaPago);
-    }
+    final prestamoNuevo = await (widget.db.select(
+      widget.db.prestamos,
+    )..where((t) => t.id.equals(prestamoIdTasa))).getSingle();
+    final base = prestamoNuevo.fechaPrimerPago ?? prestamoNuevo.fechaInicio;
+    final hoy = DateTime.now();
+    // ventana deslizante inicial: 6 meses desde hoy
+    final hasta = DateTime(hoy.year, hoy.month + 6, base.day);
+    await widget.db.asegurarAmortizacionesTasaHasta(prestamoNuevo, hasta);
 
     Navigator.pop(context);
   }

@@ -402,9 +402,9 @@ class $PrestamosTable extends Prestamos
   late final GeneratedColumn<double> pagoQuincenal = GeneratedColumn<double>(
     'pago_quincenal',
     aliasedName,
-    false,
+    true,
     type: DriftSqlType.double,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
   );
   static const VerificationMeta _fechaInicioMeta = const VerificationMeta(
     'fechaInicio',
@@ -425,9 +425,9 @@ class $PrestamosTable extends Prestamos
       GeneratedColumn<DateTime>(
         'fecha_primer_pago',
         aliasedName,
-        false,
+        true,
         type: DriftSqlType.dateTime,
-        requiredDuringInsert: true,
+        requiredDuringInsert: false,
       );
   static const VerificationMeta _fechaFinMeta = const VerificationMeta(
     'fechaFin',
@@ -440,6 +440,38 @@ class $PrestamosTable extends Prestamos
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _tipoPrestamoMeta = const VerificationMeta(
+    'tipoPrestamo',
+  );
+  @override
+  late final GeneratedColumn<String> tipoPrestamo = GeneratedColumn<String>(
+    'tipo_prestamo',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('ordinario'),
+  );
+  static const VerificationMeta _interesMensualMeta = const VerificationMeta(
+    'interesMensual',
+  );
+  @override
+  late final GeneratedColumn<double> interesMensual = GeneratedColumn<double>(
+    'interes_mensual',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _mesesMeta = const VerificationMeta('meses');
+  @override
+  late final GeneratedColumn<int> meses = GeneratedColumn<int>(
+    'meses',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -449,6 +481,9 @@ class $PrestamosTable extends Prestamos
     fechaInicio,
     fechaPrimerPago,
     fechaFin,
+    tipoPrestamo,
+    interesMensual,
+    meses,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -489,8 +524,6 @@ class $PrestamosTable extends Prestamos
           _pagoQuincenalMeta,
         ),
       );
-    } else if (isInserting) {
-      context.missing(_pagoQuincenalMeta);
     }
     if (data.containsKey('fecha_inicio')) {
       context.handle(
@@ -511,13 +544,35 @@ class $PrestamosTable extends Prestamos
           _fechaPrimerPagoMeta,
         ),
       );
-    } else if (isInserting) {
-      context.missing(_fechaPrimerPagoMeta);
     }
     if (data.containsKey('fecha_fin')) {
       context.handle(
         _fechaFinMeta,
         fechaFin.isAcceptableOrUnknown(data['fecha_fin']!, _fechaFinMeta),
+      );
+    }
+    if (data.containsKey('tipo_prestamo')) {
+      context.handle(
+        _tipoPrestamoMeta,
+        tipoPrestamo.isAcceptableOrUnknown(
+          data['tipo_prestamo']!,
+          _tipoPrestamoMeta,
+        ),
+      );
+    }
+    if (data.containsKey('interes_mensual')) {
+      context.handle(
+        _interesMensualMeta,
+        interesMensual.isAcceptableOrUnknown(
+          data['interes_mensual']!,
+          _interesMensualMeta,
+        ),
+      );
+    }
+    if (data.containsKey('meses')) {
+      context.handle(
+        _mesesMeta,
+        meses.isAcceptableOrUnknown(data['meses']!, _mesesMeta),
       );
     }
     return context;
@@ -544,7 +599,7 @@ class $PrestamosTable extends Prestamos
       pagoQuincenal: attachedDatabase.typeMapping.read(
         DriftSqlType.double,
         data['${effectivePrefix}pago_quincenal'],
-      )!,
+      ),
       fechaInicio: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}fecha_inicio'],
@@ -552,10 +607,22 @@ class $PrestamosTable extends Prestamos
       fechaPrimerPago: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}fecha_primer_pago'],
-      )!,
+      ),
       fechaFin: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}fecha_fin'],
+      ),
+      tipoPrestamo: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tipo_prestamo'],
+      )!,
+      interesMensual: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}interes_mensual'],
+      ),
+      meses: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}meses'],
       ),
     );
   }
@@ -570,20 +637,26 @@ class Prestamo extends DataClass implements Insertable<Prestamo> {
   final int id;
   final int clienteId;
   final double monto;
-  final double pagoQuincenal;
+  final double? pagoQuincenal;
   final DateTime fechaInicio;
 
   /// 🔥 NUEVO: fecha del primer pago manual
-  final DateTime fechaPrimerPago;
+  final DateTime? fechaPrimerPago;
   final DateTime? fechaFin;
+  final String tipoPrestamo;
+  final double? interesMensual;
+  final int? meses;
   const Prestamo({
     required this.id,
     required this.clienteId,
     required this.monto,
-    required this.pagoQuincenal,
+    this.pagoQuincenal,
     required this.fechaInicio,
-    required this.fechaPrimerPago,
+    this.fechaPrimerPago,
     this.fechaFin,
+    required this.tipoPrestamo,
+    this.interesMensual,
+    this.meses,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -591,11 +664,22 @@ class Prestamo extends DataClass implements Insertable<Prestamo> {
     map['id'] = Variable<int>(id);
     map['cliente_id'] = Variable<int>(clienteId);
     map['monto'] = Variable<double>(monto);
-    map['pago_quincenal'] = Variable<double>(pagoQuincenal);
+    if (!nullToAbsent || pagoQuincenal != null) {
+      map['pago_quincenal'] = Variable<double>(pagoQuincenal);
+    }
     map['fecha_inicio'] = Variable<DateTime>(fechaInicio);
-    map['fecha_primer_pago'] = Variable<DateTime>(fechaPrimerPago);
+    if (!nullToAbsent || fechaPrimerPago != null) {
+      map['fecha_primer_pago'] = Variable<DateTime>(fechaPrimerPago);
+    }
     if (!nullToAbsent || fechaFin != null) {
       map['fecha_fin'] = Variable<DateTime>(fechaFin);
+    }
+    map['tipo_prestamo'] = Variable<String>(tipoPrestamo);
+    if (!nullToAbsent || interesMensual != null) {
+      map['interes_mensual'] = Variable<double>(interesMensual);
+    }
+    if (!nullToAbsent || meses != null) {
+      map['meses'] = Variable<int>(meses);
     }
     return map;
   }
@@ -605,12 +689,23 @@ class Prestamo extends DataClass implements Insertable<Prestamo> {
       id: Value(id),
       clienteId: Value(clienteId),
       monto: Value(monto),
-      pagoQuincenal: Value(pagoQuincenal),
+      pagoQuincenal: pagoQuincenal == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pagoQuincenal),
       fechaInicio: Value(fechaInicio),
-      fechaPrimerPago: Value(fechaPrimerPago),
+      fechaPrimerPago: fechaPrimerPago == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fechaPrimerPago),
       fechaFin: fechaFin == null && nullToAbsent
           ? const Value.absent()
           : Value(fechaFin),
+      tipoPrestamo: Value(tipoPrestamo),
+      interesMensual: interesMensual == null && nullToAbsent
+          ? const Value.absent()
+          : Value(interesMensual),
+      meses: meses == null && nullToAbsent
+          ? const Value.absent()
+          : Value(meses),
     );
   }
 
@@ -623,10 +718,13 @@ class Prestamo extends DataClass implements Insertable<Prestamo> {
       id: serializer.fromJson<int>(json['id']),
       clienteId: serializer.fromJson<int>(json['clienteId']),
       monto: serializer.fromJson<double>(json['monto']),
-      pagoQuincenal: serializer.fromJson<double>(json['pagoQuincenal']),
+      pagoQuincenal: serializer.fromJson<double?>(json['pagoQuincenal']),
       fechaInicio: serializer.fromJson<DateTime>(json['fechaInicio']),
-      fechaPrimerPago: serializer.fromJson<DateTime>(json['fechaPrimerPago']),
+      fechaPrimerPago: serializer.fromJson<DateTime?>(json['fechaPrimerPago']),
       fechaFin: serializer.fromJson<DateTime?>(json['fechaFin']),
+      tipoPrestamo: serializer.fromJson<String>(json['tipoPrestamo']),
+      interesMensual: serializer.fromJson<double?>(json['interesMensual']),
+      meses: serializer.fromJson<int?>(json['meses']),
     );
   }
   @override
@@ -636,10 +734,13 @@ class Prestamo extends DataClass implements Insertable<Prestamo> {
       'id': serializer.toJson<int>(id),
       'clienteId': serializer.toJson<int>(clienteId),
       'monto': serializer.toJson<double>(monto),
-      'pagoQuincenal': serializer.toJson<double>(pagoQuincenal),
+      'pagoQuincenal': serializer.toJson<double?>(pagoQuincenal),
       'fechaInicio': serializer.toJson<DateTime>(fechaInicio),
-      'fechaPrimerPago': serializer.toJson<DateTime>(fechaPrimerPago),
+      'fechaPrimerPago': serializer.toJson<DateTime?>(fechaPrimerPago),
       'fechaFin': serializer.toJson<DateTime?>(fechaFin),
+      'tipoPrestamo': serializer.toJson<String>(tipoPrestamo),
+      'interesMensual': serializer.toJson<double?>(interesMensual),
+      'meses': serializer.toJson<int?>(meses),
     };
   }
 
@@ -647,18 +748,30 @@ class Prestamo extends DataClass implements Insertable<Prestamo> {
     int? id,
     int? clienteId,
     double? monto,
-    double? pagoQuincenal,
+    Value<double?> pagoQuincenal = const Value.absent(),
     DateTime? fechaInicio,
-    DateTime? fechaPrimerPago,
+    Value<DateTime?> fechaPrimerPago = const Value.absent(),
     Value<DateTime?> fechaFin = const Value.absent(),
+    String? tipoPrestamo,
+    Value<double?> interesMensual = const Value.absent(),
+    Value<int?> meses = const Value.absent(),
   }) => Prestamo(
     id: id ?? this.id,
     clienteId: clienteId ?? this.clienteId,
     monto: monto ?? this.monto,
-    pagoQuincenal: pagoQuincenal ?? this.pagoQuincenal,
+    pagoQuincenal: pagoQuincenal.present
+        ? pagoQuincenal.value
+        : this.pagoQuincenal,
     fechaInicio: fechaInicio ?? this.fechaInicio,
-    fechaPrimerPago: fechaPrimerPago ?? this.fechaPrimerPago,
+    fechaPrimerPago: fechaPrimerPago.present
+        ? fechaPrimerPago.value
+        : this.fechaPrimerPago,
     fechaFin: fechaFin.present ? fechaFin.value : this.fechaFin,
+    tipoPrestamo: tipoPrestamo ?? this.tipoPrestamo,
+    interesMensual: interesMensual.present
+        ? interesMensual.value
+        : this.interesMensual,
+    meses: meses.present ? meses.value : this.meses,
   );
   Prestamo copyWithCompanion(PrestamosCompanion data) {
     return Prestamo(
@@ -675,6 +788,13 @@ class Prestamo extends DataClass implements Insertable<Prestamo> {
           ? data.fechaPrimerPago.value
           : this.fechaPrimerPago,
       fechaFin: data.fechaFin.present ? data.fechaFin.value : this.fechaFin,
+      tipoPrestamo: data.tipoPrestamo.present
+          ? data.tipoPrestamo.value
+          : this.tipoPrestamo,
+      interesMensual: data.interesMensual.present
+          ? data.interesMensual.value
+          : this.interesMensual,
+      meses: data.meses.present ? data.meses.value : this.meses,
     );
   }
 
@@ -687,7 +807,10 @@ class Prestamo extends DataClass implements Insertable<Prestamo> {
           ..write('pagoQuincenal: $pagoQuincenal, ')
           ..write('fechaInicio: $fechaInicio, ')
           ..write('fechaPrimerPago: $fechaPrimerPago, ')
-          ..write('fechaFin: $fechaFin')
+          ..write('fechaFin: $fechaFin, ')
+          ..write('tipoPrestamo: $tipoPrestamo, ')
+          ..write('interesMensual: $interesMensual, ')
+          ..write('meses: $meses')
           ..write(')'))
         .toString();
   }
@@ -701,6 +824,9 @@ class Prestamo extends DataClass implements Insertable<Prestamo> {
     fechaInicio,
     fechaPrimerPago,
     fechaFin,
+    tipoPrestamo,
+    interesMensual,
+    meses,
   );
   @override
   bool operator ==(Object other) =>
@@ -712,17 +838,23 @@ class Prestamo extends DataClass implements Insertable<Prestamo> {
           other.pagoQuincenal == this.pagoQuincenal &&
           other.fechaInicio == this.fechaInicio &&
           other.fechaPrimerPago == this.fechaPrimerPago &&
-          other.fechaFin == this.fechaFin);
+          other.fechaFin == this.fechaFin &&
+          other.tipoPrestamo == this.tipoPrestamo &&
+          other.interesMensual == this.interesMensual &&
+          other.meses == this.meses);
 }
 
 class PrestamosCompanion extends UpdateCompanion<Prestamo> {
   final Value<int> id;
   final Value<int> clienteId;
   final Value<double> monto;
-  final Value<double> pagoQuincenal;
+  final Value<double?> pagoQuincenal;
   final Value<DateTime> fechaInicio;
-  final Value<DateTime> fechaPrimerPago;
+  final Value<DateTime?> fechaPrimerPago;
   final Value<DateTime?> fechaFin;
+  final Value<String> tipoPrestamo;
+  final Value<double?> interesMensual;
+  final Value<int?> meses;
   const PrestamosCompanion({
     this.id = const Value.absent(),
     this.clienteId = const Value.absent(),
@@ -731,20 +863,24 @@ class PrestamosCompanion extends UpdateCompanion<Prestamo> {
     this.fechaInicio = const Value.absent(),
     this.fechaPrimerPago = const Value.absent(),
     this.fechaFin = const Value.absent(),
+    this.tipoPrestamo = const Value.absent(),
+    this.interesMensual = const Value.absent(),
+    this.meses = const Value.absent(),
   });
   PrestamosCompanion.insert({
     this.id = const Value.absent(),
     required int clienteId,
     required double monto,
-    required double pagoQuincenal,
+    this.pagoQuincenal = const Value.absent(),
     required DateTime fechaInicio,
-    required DateTime fechaPrimerPago,
+    this.fechaPrimerPago = const Value.absent(),
     this.fechaFin = const Value.absent(),
+    this.tipoPrestamo = const Value.absent(),
+    this.interesMensual = const Value.absent(),
+    this.meses = const Value.absent(),
   }) : clienteId = Value(clienteId),
        monto = Value(monto),
-       pagoQuincenal = Value(pagoQuincenal),
-       fechaInicio = Value(fechaInicio),
-       fechaPrimerPago = Value(fechaPrimerPago);
+       fechaInicio = Value(fechaInicio);
   static Insertable<Prestamo> custom({
     Expression<int>? id,
     Expression<int>? clienteId,
@@ -753,6 +889,9 @@ class PrestamosCompanion extends UpdateCompanion<Prestamo> {
     Expression<DateTime>? fechaInicio,
     Expression<DateTime>? fechaPrimerPago,
     Expression<DateTime>? fechaFin,
+    Expression<String>? tipoPrestamo,
+    Expression<double>? interesMensual,
+    Expression<int>? meses,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -762,6 +901,9 @@ class PrestamosCompanion extends UpdateCompanion<Prestamo> {
       if (fechaInicio != null) 'fecha_inicio': fechaInicio,
       if (fechaPrimerPago != null) 'fecha_primer_pago': fechaPrimerPago,
       if (fechaFin != null) 'fecha_fin': fechaFin,
+      if (tipoPrestamo != null) 'tipo_prestamo': tipoPrestamo,
+      if (interesMensual != null) 'interes_mensual': interesMensual,
+      if (meses != null) 'meses': meses,
     });
   }
 
@@ -769,10 +911,13 @@ class PrestamosCompanion extends UpdateCompanion<Prestamo> {
     Value<int>? id,
     Value<int>? clienteId,
     Value<double>? monto,
-    Value<double>? pagoQuincenal,
+    Value<double?>? pagoQuincenal,
     Value<DateTime>? fechaInicio,
-    Value<DateTime>? fechaPrimerPago,
+    Value<DateTime?>? fechaPrimerPago,
     Value<DateTime?>? fechaFin,
+    Value<String>? tipoPrestamo,
+    Value<double?>? interesMensual,
+    Value<int?>? meses,
   }) {
     return PrestamosCompanion(
       id: id ?? this.id,
@@ -782,6 +927,9 @@ class PrestamosCompanion extends UpdateCompanion<Prestamo> {
       fechaInicio: fechaInicio ?? this.fechaInicio,
       fechaPrimerPago: fechaPrimerPago ?? this.fechaPrimerPago,
       fechaFin: fechaFin ?? this.fechaFin,
+      tipoPrestamo: tipoPrestamo ?? this.tipoPrestamo,
+      interesMensual: interesMensual ?? this.interesMensual,
+      meses: meses ?? this.meses,
     );
   }
 
@@ -809,6 +957,15 @@ class PrestamosCompanion extends UpdateCompanion<Prestamo> {
     if (fechaFin.present) {
       map['fecha_fin'] = Variable<DateTime>(fechaFin.value);
     }
+    if (tipoPrestamo.present) {
+      map['tipo_prestamo'] = Variable<String>(tipoPrestamo.value);
+    }
+    if (interesMensual.present) {
+      map['interes_mensual'] = Variable<double>(interesMensual.value);
+    }
+    if (meses.present) {
+      map['meses'] = Variable<int>(meses.value);
+    }
     return map;
   }
 
@@ -821,7 +978,10 @@ class PrestamosCompanion extends UpdateCompanion<Prestamo> {
           ..write('pagoQuincenal: $pagoQuincenal, ')
           ..write('fechaInicio: $fechaInicio, ')
           ..write('fechaPrimerPago: $fechaPrimerPago, ')
-          ..write('fechaFin: $fechaFin')
+          ..write('fechaFin: $fechaFin, ')
+          ..write('tipoPrestamo: $tipoPrestamo, ')
+          ..write('interesMensual: $interesMensual, ')
+          ..write('meses: $meses')
           ..write(')'))
         .toString();
   }
@@ -1178,12 +1338,353 @@ class AmortizacionesCompanion extends UpdateCompanion<Amortizacione> {
   }
 }
 
+class $AbonosTable extends Abonos with TableInfo<$AbonosTable, Abono> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AbonosTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _prestamoIdMeta = const VerificationMeta(
+    'prestamoId',
+  );
+  @override
+  late final GeneratedColumn<int> prestamoId = GeneratedColumn<int>(
+    'prestamo_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _montoMeta = const VerificationMeta('monto');
+  @override
+  late final GeneratedColumn<double> monto = GeneratedColumn<double>(
+    'monto',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _fechaMeta = const VerificationMeta('fecha');
+  @override
+  late final GeneratedColumn<DateTime> fecha = GeneratedColumn<DateTime>(
+    'fecha',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _tipoMeta = const VerificationMeta('tipo');
+  @override
+  late final GeneratedColumn<String> tipo = GeneratedColumn<String>(
+    'tipo',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, prestamoId, monto, fecha, tipo];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'abonos';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<Abono> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('prestamo_id')) {
+      context.handle(
+        _prestamoIdMeta,
+        prestamoId.isAcceptableOrUnknown(data['prestamo_id']!, _prestamoIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_prestamoIdMeta);
+    }
+    if (data.containsKey('monto')) {
+      context.handle(
+        _montoMeta,
+        monto.isAcceptableOrUnknown(data['monto']!, _montoMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_montoMeta);
+    }
+    if (data.containsKey('fecha')) {
+      context.handle(
+        _fechaMeta,
+        fecha.isAcceptableOrUnknown(data['fecha']!, _fechaMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_fechaMeta);
+    }
+    if (data.containsKey('tipo')) {
+      context.handle(
+        _tipoMeta,
+        tipo.isAcceptableOrUnknown(data['tipo']!, _tipoMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Abono map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Abono(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      prestamoId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}prestamo_id'],
+      )!,
+      monto: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}monto'],
+      )!,
+      fecha: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}fecha'],
+      )!,
+      tipo: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tipo'],
+      ),
+    );
+  }
+
+  @override
+  $AbonosTable createAlias(String alias) {
+    return $AbonosTable(attachedDatabase, alias);
+  }
+}
+
+class Abono extends DataClass implements Insertable<Abono> {
+  final int id;
+  final int prestamoId;
+  final double monto;
+  final DateTime fecha;
+  final String? tipo;
+  const Abono({
+    required this.id,
+    required this.prestamoId,
+    required this.monto,
+    required this.fecha,
+    this.tipo,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['prestamo_id'] = Variable<int>(prestamoId);
+    map['monto'] = Variable<double>(monto);
+    map['fecha'] = Variable<DateTime>(fecha);
+    if (!nullToAbsent || tipo != null) {
+      map['tipo'] = Variable<String>(tipo);
+    }
+    return map;
+  }
+
+  AbonosCompanion toCompanion(bool nullToAbsent) {
+    return AbonosCompanion(
+      id: Value(id),
+      prestamoId: Value(prestamoId),
+      monto: Value(monto),
+      fecha: Value(fecha),
+      tipo: tipo == null && nullToAbsent ? const Value.absent() : Value(tipo),
+    );
+  }
+
+  factory Abono.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Abono(
+      id: serializer.fromJson<int>(json['id']),
+      prestamoId: serializer.fromJson<int>(json['prestamoId']),
+      monto: serializer.fromJson<double>(json['monto']),
+      fecha: serializer.fromJson<DateTime>(json['fecha']),
+      tipo: serializer.fromJson<String?>(json['tipo']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'prestamoId': serializer.toJson<int>(prestamoId),
+      'monto': serializer.toJson<double>(monto),
+      'fecha': serializer.toJson<DateTime>(fecha),
+      'tipo': serializer.toJson<String?>(tipo),
+    };
+  }
+
+  Abono copyWith({
+    int? id,
+    int? prestamoId,
+    double? monto,
+    DateTime? fecha,
+    Value<String?> tipo = const Value.absent(),
+  }) => Abono(
+    id: id ?? this.id,
+    prestamoId: prestamoId ?? this.prestamoId,
+    monto: monto ?? this.monto,
+    fecha: fecha ?? this.fecha,
+    tipo: tipo.present ? tipo.value : this.tipo,
+  );
+  Abono copyWithCompanion(AbonosCompanion data) {
+    return Abono(
+      id: data.id.present ? data.id.value : this.id,
+      prestamoId: data.prestamoId.present
+          ? data.prestamoId.value
+          : this.prestamoId,
+      monto: data.monto.present ? data.monto.value : this.monto,
+      fecha: data.fecha.present ? data.fecha.value : this.fecha,
+      tipo: data.tipo.present ? data.tipo.value : this.tipo,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Abono(')
+          ..write('id: $id, ')
+          ..write('prestamoId: $prestamoId, ')
+          ..write('monto: $monto, ')
+          ..write('fecha: $fecha, ')
+          ..write('tipo: $tipo')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, prestamoId, monto, fecha, tipo);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Abono &&
+          other.id == this.id &&
+          other.prestamoId == this.prestamoId &&
+          other.monto == this.monto &&
+          other.fecha == this.fecha &&
+          other.tipo == this.tipo);
+}
+
+class AbonosCompanion extends UpdateCompanion<Abono> {
+  final Value<int> id;
+  final Value<int> prestamoId;
+  final Value<double> monto;
+  final Value<DateTime> fecha;
+  final Value<String?> tipo;
+  const AbonosCompanion({
+    this.id = const Value.absent(),
+    this.prestamoId = const Value.absent(),
+    this.monto = const Value.absent(),
+    this.fecha = const Value.absent(),
+    this.tipo = const Value.absent(),
+  });
+  AbonosCompanion.insert({
+    this.id = const Value.absent(),
+    required int prestamoId,
+    required double monto,
+    required DateTime fecha,
+    this.tipo = const Value.absent(),
+  }) : prestamoId = Value(prestamoId),
+       monto = Value(monto),
+       fecha = Value(fecha);
+  static Insertable<Abono> custom({
+    Expression<int>? id,
+    Expression<int>? prestamoId,
+    Expression<double>? monto,
+    Expression<DateTime>? fecha,
+    Expression<String>? tipo,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (prestamoId != null) 'prestamo_id': prestamoId,
+      if (monto != null) 'monto': monto,
+      if (fecha != null) 'fecha': fecha,
+      if (tipo != null) 'tipo': tipo,
+    });
+  }
+
+  AbonosCompanion copyWith({
+    Value<int>? id,
+    Value<int>? prestamoId,
+    Value<double>? monto,
+    Value<DateTime>? fecha,
+    Value<String?>? tipo,
+  }) {
+    return AbonosCompanion(
+      id: id ?? this.id,
+      prestamoId: prestamoId ?? this.prestamoId,
+      monto: monto ?? this.monto,
+      fecha: fecha ?? this.fecha,
+      tipo: tipo ?? this.tipo,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (prestamoId.present) {
+      map['prestamo_id'] = Variable<int>(prestamoId.value);
+    }
+    if (monto.present) {
+      map['monto'] = Variable<double>(monto.value);
+    }
+    if (fecha.present) {
+      map['fecha'] = Variable<DateTime>(fecha.value);
+    }
+    if (tipo.present) {
+      map['tipo'] = Variable<String>(tipo.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AbonosCompanion(')
+          ..write('id: $id, ')
+          ..write('prestamoId: $prestamoId, ')
+          ..write('monto: $monto, ')
+          ..write('fecha: $fecha, ')
+          ..write('tipo: $tipo')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $ClientesTable clientes = $ClientesTable(this);
   late final $PrestamosTable prestamos = $PrestamosTable(this);
   late final $AmortizacionesTable amortizaciones = $AmortizacionesTable(this);
+  late final $AbonosTable abonos = $AbonosTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -1192,6 +1693,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     clientes,
     prestamos,
     amortizaciones,
+    abonos,
   ];
 }
 
@@ -1390,20 +1892,26 @@ typedef $$PrestamosTableCreateCompanionBuilder =
       Value<int> id,
       required int clienteId,
       required double monto,
-      required double pagoQuincenal,
+      Value<double?> pagoQuincenal,
       required DateTime fechaInicio,
-      required DateTime fechaPrimerPago,
+      Value<DateTime?> fechaPrimerPago,
       Value<DateTime?> fechaFin,
+      Value<String> tipoPrestamo,
+      Value<double?> interesMensual,
+      Value<int?> meses,
     });
 typedef $$PrestamosTableUpdateCompanionBuilder =
     PrestamosCompanion Function({
       Value<int> id,
       Value<int> clienteId,
       Value<double> monto,
-      Value<double> pagoQuincenal,
+      Value<double?> pagoQuincenal,
       Value<DateTime> fechaInicio,
-      Value<DateTime> fechaPrimerPago,
+      Value<DateTime?> fechaPrimerPago,
       Value<DateTime?> fechaFin,
+      Value<String> tipoPrestamo,
+      Value<double?> interesMensual,
+      Value<int?> meses,
     });
 
 class $$PrestamosTableFilterComposer
@@ -1447,6 +1955,21 @@ class $$PrestamosTableFilterComposer
 
   ColumnFilters<DateTime> get fechaFin => $composableBuilder(
     column: $table.fechaFin,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get tipoPrestamo => $composableBuilder(
+    column: $table.tipoPrestamo,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get interesMensual => $composableBuilder(
+    column: $table.interesMensual,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get meses => $composableBuilder(
+    column: $table.meses,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -1494,6 +2017,21 @@ class $$PrestamosTableOrderingComposer
     column: $table.fechaFin,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get tipoPrestamo => $composableBuilder(
+    column: $table.tipoPrestamo,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get interesMensual => $composableBuilder(
+    column: $table.interesMensual,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get meses => $composableBuilder(
+    column: $table.meses,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$PrestamosTableAnnotationComposer
@@ -1531,6 +2069,19 @@ class $$PrestamosTableAnnotationComposer
 
   GeneratedColumn<DateTime> get fechaFin =>
       $composableBuilder(column: $table.fechaFin, builder: (column) => column);
+
+  GeneratedColumn<String> get tipoPrestamo => $composableBuilder(
+    column: $table.tipoPrestamo,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get interesMensual => $composableBuilder(
+    column: $table.interesMensual,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get meses =>
+      $composableBuilder(column: $table.meses, builder: (column) => column);
 }
 
 class $$PrestamosTableTableManager
@@ -1564,10 +2115,13 @@ class $$PrestamosTableTableManager
                 Value<int> id = const Value.absent(),
                 Value<int> clienteId = const Value.absent(),
                 Value<double> monto = const Value.absent(),
-                Value<double> pagoQuincenal = const Value.absent(),
+                Value<double?> pagoQuincenal = const Value.absent(),
                 Value<DateTime> fechaInicio = const Value.absent(),
-                Value<DateTime> fechaPrimerPago = const Value.absent(),
+                Value<DateTime?> fechaPrimerPago = const Value.absent(),
                 Value<DateTime?> fechaFin = const Value.absent(),
+                Value<String> tipoPrestamo = const Value.absent(),
+                Value<double?> interesMensual = const Value.absent(),
+                Value<int?> meses = const Value.absent(),
               }) => PrestamosCompanion(
                 id: id,
                 clienteId: clienteId,
@@ -1576,16 +2130,22 @@ class $$PrestamosTableTableManager
                 fechaInicio: fechaInicio,
                 fechaPrimerPago: fechaPrimerPago,
                 fechaFin: fechaFin,
+                tipoPrestamo: tipoPrestamo,
+                interesMensual: interesMensual,
+                meses: meses,
               ),
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
                 required int clienteId,
                 required double monto,
-                required double pagoQuincenal,
+                Value<double?> pagoQuincenal = const Value.absent(),
                 required DateTime fechaInicio,
-                required DateTime fechaPrimerPago,
+                Value<DateTime?> fechaPrimerPago = const Value.absent(),
                 Value<DateTime?> fechaFin = const Value.absent(),
+                Value<String> tipoPrestamo = const Value.absent(),
+                Value<double?> interesMensual = const Value.absent(),
+                Value<int?> meses = const Value.absent(),
               }) => PrestamosCompanion.insert(
                 id: id,
                 clienteId: clienteId,
@@ -1594,6 +2154,9 @@ class $$PrestamosTableTableManager
                 fechaInicio: fechaInicio,
                 fechaPrimerPago: fechaPrimerPago,
                 fechaFin: fechaFin,
+                tipoPrestamo: tipoPrestamo,
+                interesMensual: interesMensual,
+                meses: meses,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -1815,6 +2378,196 @@ typedef $$AmortizacionesTableProcessedTableManager =
       Amortizacione,
       PrefetchHooks Function()
     >;
+typedef $$AbonosTableCreateCompanionBuilder =
+    AbonosCompanion Function({
+      Value<int> id,
+      required int prestamoId,
+      required double monto,
+      required DateTime fecha,
+      Value<String?> tipo,
+    });
+typedef $$AbonosTableUpdateCompanionBuilder =
+    AbonosCompanion Function({
+      Value<int> id,
+      Value<int> prestamoId,
+      Value<double> monto,
+      Value<DateTime> fecha,
+      Value<String?> tipo,
+    });
+
+class $$AbonosTableFilterComposer
+    extends Composer<_$AppDatabase, $AbonosTable> {
+  $$AbonosTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get prestamoId => $composableBuilder(
+    column: $table.prestamoId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get monto => $composableBuilder(
+    column: $table.monto,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get fecha => $composableBuilder(
+    column: $table.fecha,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get tipo => $composableBuilder(
+    column: $table.tipo,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$AbonosTableOrderingComposer
+    extends Composer<_$AppDatabase, $AbonosTable> {
+  $$AbonosTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get prestamoId => $composableBuilder(
+    column: $table.prestamoId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get monto => $composableBuilder(
+    column: $table.monto,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get fecha => $composableBuilder(
+    column: $table.fecha,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get tipo => $composableBuilder(
+    column: $table.tipo,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$AbonosTableAnnotationComposer
+    extends Composer<_$AppDatabase, $AbonosTable> {
+  $$AbonosTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get prestamoId => $composableBuilder(
+    column: $table.prestamoId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get monto =>
+      $composableBuilder(column: $table.monto, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get fecha =>
+      $composableBuilder(column: $table.fecha, builder: (column) => column);
+
+  GeneratedColumn<String> get tipo =>
+      $composableBuilder(column: $table.tipo, builder: (column) => column);
+}
+
+class $$AbonosTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $AbonosTable,
+          Abono,
+          $$AbonosTableFilterComposer,
+          $$AbonosTableOrderingComposer,
+          $$AbonosTableAnnotationComposer,
+          $$AbonosTableCreateCompanionBuilder,
+          $$AbonosTableUpdateCompanionBuilder,
+          (Abono, BaseReferences<_$AppDatabase, $AbonosTable, Abono>),
+          Abono,
+          PrefetchHooks Function()
+        > {
+  $$AbonosTableTableManager(_$AppDatabase db, $AbonosTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$AbonosTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$AbonosTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$AbonosTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> prestamoId = const Value.absent(),
+                Value<double> monto = const Value.absent(),
+                Value<DateTime> fecha = const Value.absent(),
+                Value<String?> tipo = const Value.absent(),
+              }) => AbonosCompanion(
+                id: id,
+                prestamoId: prestamoId,
+                monto: monto,
+                fecha: fecha,
+                tipo: tipo,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int prestamoId,
+                required double monto,
+                required DateTime fecha,
+                Value<String?> tipo = const Value.absent(),
+              }) => AbonosCompanion.insert(
+                id: id,
+                prestamoId: prestamoId,
+                monto: monto,
+                fecha: fecha,
+                tipo: tipo,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$AbonosTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $AbonosTable,
+      Abono,
+      $$AbonosTableFilterComposer,
+      $$AbonosTableOrderingComposer,
+      $$AbonosTableAnnotationComposer,
+      $$AbonosTableCreateCompanionBuilder,
+      $$AbonosTableUpdateCompanionBuilder,
+      (Abono, BaseReferences<_$AppDatabase, $AbonosTable, Abono>),
+      Abono,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -1825,4 +2578,6 @@ class $AppDatabaseManager {
       $$PrestamosTableTableManager(_db, _db.prestamos);
   $$AmortizacionesTableTableManager get amortizaciones =>
       $$AmortizacionesTableTableManager(_db, _db.amortizaciones);
+  $$AbonosTableTableManager get abonos =>
+      $$AbonosTableTableManager(_db, _db.abonos);
 }

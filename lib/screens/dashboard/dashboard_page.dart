@@ -31,7 +31,8 @@ class _DashboardPageState extends State<DashboardPage> {
     for (final p in prestamos) {
       totalPrestado += p.monto;
       totalGanancia +=
-          (p.pagoQuincenal * 8) - p.monto; // ejemplo ganancia quincenal 8 pagos
+          ((p.pagoQuincenal ?? 0) * 8) -
+          p.monto; // ejemplo ganancia quincenal 8 pagos
       // calcular próximos a liquidar (pagos que todavía no pasaron)
       final ahora = DateTime.now();
       final amortizacion = p.generarAmortizacion(8);

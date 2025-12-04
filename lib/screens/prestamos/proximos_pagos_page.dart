@@ -58,13 +58,41 @@ class _ProximosPagosPageState extends State<ProximosPagosPage> {
               final pago = pagos[i];
               final fecha = pago['fecha'] as DateTime;
               return ListTile(
-                leading: Text("Pago ${pago['pagoNumero']}"),
+                leading: Text(
+                  pago['tipo'] == 'tasa'
+                      ? 'Interés'
+                      : "Pago ${pago['pagoNumero']}",
+                ),
                 title: Text(
                   "${pago['clienteNombre']} - \$${pago['monto'].toStringAsFixed(2)}",
                 ),
-                subtitle: Text(
-                  "${fecha.day.toString().padLeft(2, '0')} ${_nombreMes(fecha.month)} ${fecha.year}",
-                ),
+                subtitle: pago['tipo'] == 'tasa'
+                    ? FutureBuilder<Prestamo>(
+                        future: (widget.db.select(widget.db.prestamos)
+                              ..where((t) => t.id.equals(pago['prestamoId'] as int)))
+                            .getSingle(),
+                        builder: (context, snapP) {
+                          if (!snapP.hasData) {
+                            return Text(
+                              "${fecha.day.toString().padLeft(2, '0')} ${_nombreMes(fecha.month)} ${fecha.year} • Saldo: ...",
+                            );
+                          }
+                          return FutureBuilder<double>(
+                            future: widget.db.calcularSaldoEnFecha(snapP.data!, fecha),
+                            builder: (context, snapSaldo) {
+                              final saldoTxt = snapSaldo.hasData
+                                  ? "\$${snapSaldo.data!.toStringAsFixed(2)}"
+                                  : "...";
+                              return Text(
+                                "${fecha.day.toString().padLeft(2, '0')} ${_nombreMes(fecha.month)} ${fecha.year} • Saldo: $saldoTxt",
+                              );
+                            },
+                          );
+                        },
+                      )
+                    : Text(
+                        "${fecha.day.toString().padLeft(2, '0')} ${_nombreMes(fecha.month)} ${fecha.year}",
+                      ),
               );
             },
           );

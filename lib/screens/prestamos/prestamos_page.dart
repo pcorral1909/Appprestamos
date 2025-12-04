@@ -58,7 +58,7 @@ class _PrestamosPageState extends State<PrestamosPage> {
               return ListTile(
                 title: Text("Monto: \$${p.monto.toStringAsFixed(2)}"),
                 subtitle: Text(
-                  "Pago quincenal: \$${p.pagoQuincenal.toStringAsFixed(2)}\nInicio: ${p.fechaInicio.toLocal().toString().split(' ')[0]}",
+                  "Pago quincenal: \$${(p.pagoQuincenal ?? 0).toStringAsFixed(2)}\nInicio: ${p.fechaInicio.toLocal().toString().split(' ')[0]}",
                 ),
                 leading: const Icon(Icons.attach_money),
               );
