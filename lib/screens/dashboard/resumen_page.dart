@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:pie_chart/pie_chart.dart';
 import 'package:prestamos_app/database/app_database.dart';
-import '../clientes/clientes_page.dart';
+import '../../features/clientes/presentation/pages/clientes_page.dart';
 import '../prestamos/proximos_pagos_page.dart';
 import 'package:drift/drift.dart' hide Column;
-import 'package:rxdart/rxdart.dart'; // agregar arriba con los imports
+import 'package:rxdart/rxdart.dart';
 
 class ResumenPage extends StatefulWidget {
   final AppDatabase db;
@@ -231,7 +231,7 @@ class _ResumenPageState extends State<ResumenPage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => ClientesPage(db: widget.db),
+                    builder: (_) => const ClientesPage(),
                   ),
                 );
               },
