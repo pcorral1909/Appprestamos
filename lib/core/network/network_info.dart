@@ -10,11 +10,19 @@ class NetworkInfoImpl implements NetworkInfo {
   @override
   Future<bool> get isConnected async {
     try {
-      // Intenta hacer ping a Google DNS
-      final result = await InternetAddress.lookup('google.com');
+      // Método más simple y confiable para WiFi sin SIM
+      final result = await InternetAddress.lookup('google.com')
+          .timeout(const Duration(seconds: 5));
       return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
-    } on SocketException catch (_) {
-      return false;
+    } catch (e) {
+      // Si falla DNS, intenta con una IP directa
+      try {
+        final socket = await Socket.connect('8.8.8.8', 53, timeout: const Duration(seconds: 3));
+        socket.destroy();
+        return true;
+      } catch (e) {
+        return false;
+      }
     }
   }
 }

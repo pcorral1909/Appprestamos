@@ -96,7 +96,7 @@ class _AgregarPrestamoPageState extends State<AgregarPrestamoPage> {
                 final fecha = await showDatePicker(
                   context: context,
                   initialDate: hoy,
-                  firstDate: hoy.subtract(const Duration(days: 120)),
+                  firstDate: hoy.subtract(const Duration(days: 90)), // 3 meses atrás
                   lastDate: hoy.add(const Duration(days: 365)),
                 );
 

@@ -25,10 +25,15 @@ class AuthRepositoryImpl implements AuthRepository {
     required String email,
     required String password,
   }) async {
-    // Verifica conectividad de red
-    if (!await networkInfo.isConnected) {
+    // TEMPORAL: Omitir verificación de red para testing con WiFi sin SIM
+    /*
+    final hasConnection = await networkInfo.isConnected;
+    print('[AUTH_REPO] Conexión detectada: $hasConnection');
+    
+    if (!hasConnection) {
       return const Left(ConnectionFailure('Sin conexión a internet'));
     }
+    */
     
     try {
       // Intenta hacer login con el API remoto

@@ -19,8 +19,7 @@ import 'features/clientes/presentation/pages/clientes_page.dart';
 
 // Screens existentes
 import 'database/app_database.dart';
-import 'screens/dashboard/resumen_page.dart';
-import 'widgets/auth_guard.dart';
+import 'screens/dashboard/inicio_page.dart';
 
 void main() async {
   // Asegura que los widgets estén inicializados
@@ -210,6 +209,7 @@ class _DashboardPageState extends State<DashboardPage> {
   late final AppDatabase db;
   final SessionTimeoutService _sessionTimeout = SessionTimeoutService();
   final TokenExpirationService _tokenService = TokenExpirationService();
+  Key _inicioPageKey = UniqueKey();
 
   @override
   void initState() {
@@ -235,20 +235,19 @@ class _DashboardPageState extends State<DashboardPage> {
       body: IndexedStack(
         index: _selectedIndex,
         children: [
-          // Resumen (pantalla existente)
-          ResumenPage(db: db),
-          
-          // Clientes (nueva funcionalidad)
-          const ClientesPage(),
-          
-          // Placeholder para otras funcionalidades
-          const Center(
-            child: Text(
-              'Préstamos\n(Próximamente)',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 18),
-            ),
+          // Inicio/Dashboard (nueva página de bienvenida)
+          InicioPage(
+            key: _inicioPageKey,
+            db: db,
+            onTabChange: (index) {
+              setState(() {
+                _selectedIndex = index;
+              });
+            },
           ),
+          
+          // Clientes
+          const ClientesPage(),
           
           // Configuración
           const ConfiguracionPage(),
@@ -261,23 +260,22 @@ class _DashboardPageState extends State<DashboardPage> {
           setState(() {
             _selectedIndex = index;
           });
-          // Resetea el timer en cada interacción
+          // Si selecciona la pestaña de inicio, crear nueva instancia
+          if (index == 0) {
+            _inicioPageKey = UniqueKey();
+          }
           _sessionTimeout.resetTimer(context);
         },
         selectedItemColor: Colors.blue,
         unselectedItemColor: Colors.grey,
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard),
-            label: 'Resumen',
+            icon: Icon(Icons.home),
+            label: 'Inicio',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.people),
             label: 'Clientes',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.account_balance_wallet),
-            label: 'Préstamos',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.settings),
@@ -451,7 +449,6 @@ class ConfiguracionPage extends StatelessWidget {
   void _performLogout() async {
     try {
       await AuthUtils.clearSession();
-      // Reiniciar la app forzando una nueva verificación
       runApp(const PrestamosApp());
     } catch (e) {
       print('Error en logout: $e');

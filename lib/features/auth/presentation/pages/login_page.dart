@@ -31,14 +31,19 @@ class _LoginPageState extends State<LoginPage> {
       body: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state is AuthError) {
+            // No limpiar los campos en caso de error
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
                 backgroundColor: Colors.red,
+                duration: const Duration(seconds: 4),
               ),
             );
+          } else if (state is AuthLoading) {
+            // Solo limpiar cuando empiece a cargar (opcional)
+            // _emailController.clear();
+            // _passwordController.clear();
           }
-          // No navegamos manualmente, el AuthWrapper se encarga
         },
         builder: (context, state) {
           return SafeArea(
@@ -198,6 +203,7 @@ class _LoginPageState extends State<LoginPage> {
 
   void _handleLogin() {
     if (_formKey.currentState!.validate()) {
+      // No limpiar los campos hasta que el login sea exitoso
       context.read<AuthBloc>().add(LoginRequested(
         email: _emailController.text.trim(),
         password: _passwordController.text,
